@@ -28,7 +28,8 @@
             size,               // The size of the app file.
             appID,              // The App ID.
             lastChangedDate,    // Last updated date of the app.
-            appLocation;        // The file system path to the IPA.
+            appLocation,        // The file system path to the IPA.
+            infoFileData;       // An indicator that this app object has retrieved all its info and is ready.
         
         
         //=========================================================
@@ -38,7 +39,7 @@
         /*
          * Retrieve the top level app name from the file name.
          */
-        function extractAppName() {
+        function extractAppNameFromFilename() {
 
             // Our filename will most likely come in as
             // com.bf.something.else.appName.ipa
@@ -71,6 +72,41 @@
             }
             return true;
         }
+        
+        /*
+         * Load the app's info file from which we can extrace various pieces of info.
+         */
+        function loadAppInfoFile() {
+            
+            // If we have already loaded all the apps just return.
+            if (infoFileData !== undefined) {
+                return;
+            }
+            
+            // In this case we need to open the Info.plist file and cache it.
+            var ipaZip = new Zip(appLocation),
+                zipEntries = ipaZip.getEntries(),
+                fileFound = false,
+                result = '';
+            
+            // Find the artwork file and extract the artwork.
+            zipEntries.forEach(function (zipEntry) {
+                if (!fileFound && zipEntry.name === "Info.plist") {
+                    
+                    ipaZip.extractEntryTo(zipEntry.entryName, appLocation + "_extracted", true, true);
+                    
+                    // read in the file and apply a regex to it to get the version.
+                    infoFileData = fs.readFileSync(appLocation + "_extracted/" + zipEntry.entryName, 'utf8');
+                    
+                    fileFound = !fileFound;
+                }
+            });
+            
+            if (fileFound) {
+                // Cleanup the remaining directories
+                rimraf.sync(appLocation + "_extracted");
+            }
+        }
 
         /*
          * Retrieve the path to the icon file.
@@ -85,8 +121,8 @@
             // The file. In the future we also need to be mindful of updated apps
 
             // First we check for a jpg of the name of ipa
-            if (fileLocationValid(appLocation + ".icon.png")) {
-                return appLocation + ".icon.jpg";
+            if (fileLocationValid(appLocation + "." + version + ".png")) {
+                return appLocation + "." + version + ".png";
             } else {
                 // In this case we need to open the ipa file and cache the icon of the app.
                 var ipaZip = new Zip(appLocation),
@@ -97,7 +133,7 @@
                 zipEntries.forEach(function (zipEntry) {
                     if (!artworkFound && zipEntry.name === "iTunesArtwork") {
                         ipaZip.extractEntryTo(zipEntry.entryName, appLocation + "_extracted", true, true);
-                        fs.renameSync(appLocation + "_extracted/" + zipEntry.entryName, appLocation + ".icon.png");
+                        fs.renameSync(appLocation + "_extracted/" + zipEntry.entryName, appLocation + "." + version + ".png");
                         artworkFound = !artworkFound;
                     }
                 });
@@ -110,35 +146,96 @@
                     iconPath = defaultIconName;
                 }
 
-                return appLocation + ".icon.png";
+                return appLocation + "." + version + ".png";
+            }
+        }
+    
+        
+        /*
+         * Retrieve the version of the app.
+         */
+        function extractAppVersion() {
+
+            // With each IPA there is a file which contains all the app info called info.plist.
+            // To get it you need to look in the bundle (computationally expensive).
+            // In the future we are going to want to cache this information somewhere.
+            
+            // If we already have the app version - we just return it.
+            if (version !== undefined) {
+                return version;
+            }
+            
+            // Make sure we haave a version of the info file loaded.
+            loadAppInfoFile();
+            
+            var result = infoFileData.match('(?:<key>CFBundleVersion<\/key>\n\t<string>)(.*)(?=<\/string>)');
+            return result[1];
+        }
+        
+        /*
+         * Retrieve the display name of the app.
+         */
+        function extractAppDisplayName() {
+
+            // With each IPA there is a file which contains all the app info called info.plist.
+            // To get it you need to look in the bundle (computationally expensive).
+            // In the future we are going to want to cache this information somewhere.
+            
+            // If we already have the app name - we just return it.
+            if (appName !== undefined) {
+                return appName;
+            }
+            
+            // Make sure we haave a version of the info file loaded.
+            loadAppInfoFile();
+            
+            var result = infoFileData.match('(?:<key>CFBundleExecutable<\/key>\n\t<string>)(.*)(?=<\/string>)');
+            
+            // If we don't have a valid app name from within the IPA we derive it from the app filename.
+            if (result[1] === undefined) {
+                return extractAppNameFromFilename();
+            } else {
+                return result[1];
+            }
+        }
+        
+        /*
+         * Retrieve the application ID.
+         */
+        function extractAppID() {
+            
+            // If we already have the app ID - we just return it.
+            if (appID !== undefined) {
+                return appID;
+            }
+            
+            // Make sure the info.plist is loaded.
+            loadAppInfoFile();
+            
+            var result = infoFileData.match('(?:<key>CFBundleIdentifier<\/key>\n\t<string>)(.*)(?=<\/string>)');
+            
+            // If we don't have a valid app ID from within the IPA we need to explore alternaitve.
+            if (result[1] === undefined) {
+                return "unknown";
+            } else {
+                return result[1];
             }
         }
         
         /*
          * Returns the timestamp the file was created at.
          */
-        function getCreationTimestamp() {
-        
+        function extractAppCreationTimestamp() {
             var fileStats = fs.statSync(appLocation);
             return fileStats.ctime;
-            
         }
         
         /*
          * Returns the timestamp the file was created at.
          */
-        function getAppSize() {
-        
+        function extractAppSize() {
             var fileStats = fs.statSync(appLocation);
             return fileStats.size;
-            
-        }
-
-        function getDetailsFromAppFile() {
-            appName = extractAppName();
-            iconPath = extractIconPath();
-            creationDate = getCreationTimestamp();
-            size = getAppSize();
         }
 
          // Store the app lcoation for use elsewhere.
@@ -149,9 +246,6 @@
             throw "Application file not found";
         }
         
-        // Retrieve the infomation on our app and prepare it for use.
-        getDetailsFromAppFile();
-        
         //=========================================================
         // Public Methods
         //=========================================================
@@ -159,17 +253,17 @@
         return {
             // Name of the app
             getAppName: function () {
-                return appName;
+                return extractAppDisplayName();
             },
 
             // Icon for the app
             getIconPath: function () {
-                return iconPath;
+                return extractIconPath();
             },
 
             // Version of the app
             getVersion: function () {
-                return -1;
+                return extractAppVersion();
             },
 
             // Description of the app
@@ -183,12 +277,17 @@
 
             // Creation date of the app
             getCreationDate: function () {
-                return creationDate;
+                return extractAppCreationTimestamp();
             },
             
             // The size of the app file.
             getAppSize: function () {
-                return size;
+                return extractAppSize();
+            },
+            
+            // The application ID of the app
+            getAppID: function () {
+                return extractAppID();
             }
         };
 

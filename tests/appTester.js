@@ -13,8 +13,22 @@
     
     var App = require('../app.js'),
         invalidAppPath = 'C:\\ipas\\com.notExistsing.ipa',
-        validAppPath = 'C:\\ipas\\com.test.ipa',
+        validAppPath1 = 'C:\\ipas\\com.test.ipa',
+        validAppPath2 = 'C:\\ipas\\com.test2.ipa',
+        validAppPath3 = 'C:\\ipas\\com.test3.ipa',
         allTestsPassed = true;
+    
+    function loadApp(path) {
+        var app1 = new App(path);
+
+        console.log("App Name: " + app1.getAppName());
+        console.log("Icon File: " + app1.getIconPath());
+        console.log("Download Path: " + app1.getDownloadPath());
+        console.log("App created at: " + app1.getCreationDate());
+        console.log("App Size (bytes): " + app1.getAppSize());
+        console.log("App version: " + app1.getVersion());
+        console.log("App ID: " + app1.getAppID());
+    }
     
     /*
      * Function for testing an app that doesn't exist.
@@ -24,13 +38,7 @@
         try {
             // Failed Test
             console.log("Starting test: Invalid App at path " + invalidAppPath);
-            var app1 = new App(invalidAppPath);
-
-            console.log("App Name: " + app1.getAppName());
-            console.log("Icon File: " + app1.getIconPath());
-            console.log("Download Path: " + app1.getDownloadPath());
-            console.log("App created at: " + app1.getCreationDate());
-            console.log("App Size (bytes): " + app1.getAppSize());
+            loadApp(invalidAppPath);
             allTestsPassed = !allTestsPassed;
             console.log("Test failed - no exception thrown");
 
@@ -48,13 +56,18 @@
     function performValidAppTest() {
         try {
             // Passed Test.
-            console.log("Starting test: Valid app at path " + validAppPath);
-            var app2 = new App(validAppPath);
-            console.log("App Name: " + app2.getAppName());
-            console.log("Icon File: " + app2.getIconPath());
-            console.log("Download Path: " + app2.getDownloadPath());
-            console.log("App created at: " + app2.getCreationDate());
-            console.log("App Size (bytes): " + app2.getAppSize());
+            console.log("Starting test: Valid app at path " + validAppPath1);
+            loadApp(validAppPath1);
+            console.log("Test passed - Valid IPA Test complete.");
+            
+            // Passed Test.
+            console.log("Starting test: Valid app at path " + validAppPath2);
+            loadApp(validAppPath2);
+            console.log("Test passed - Valid IPA Test complete.");
+            
+            // Passed Test.
+            console.log("Starting test: Valid app at path " + validAppPath3);
+            loadApp(validAppPath3);
             console.log("Test passed - Valid IPA Test complete.");
 
         } catch (e2) {
