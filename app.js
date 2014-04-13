@@ -25,6 +25,7 @@
             version,            // The version of the app.
             description,        // A description of the app.
             creationDate,       // The file creation date.
+            size,               // The size of the app file.
             appID,              // The App ID.
             lastChangedDate,    // Last updated date of the app.
             appLocation;        // The file system path to the IPA.
@@ -112,10 +113,32 @@
                 return appLocation + ".icon.png";
             }
         }
+        
+        /*
+         * Returns the timestamp the file was created at.
+         */
+        function getCreationTimestamp() {
+        
+            var fileStats = fs.statSync(appLocation);
+            return fileStats.ctime;
+            
+        }
+        
+        /*
+         * Returns the timestamp the file was created at.
+         */
+        function getAppSize() {
+        
+            var fileStats = fs.statSync(appLocation);
+            return fileStats.size;
+            
+        }
 
         function getDetailsFromAppFile() {
             appName = extractAppName();
             iconPath = extractIconPath();
+            creationDate = getCreationTimestamp();
+            size = getAppSize();
         }
 
          // Store the app lcoation for use elsewhere.
@@ -146,6 +169,7 @@
 
             // Version of the app
             getVersion: function () {
+                return -1;
             },
 
             // Description of the app
@@ -159,6 +183,12 @@
 
             // Creation date of the app
             getCreationDate: function () {
+                return creationDate;
+            },
+            
+            // The size of the app file.
+            getAppSize: function () {
+                return size;
             }
         };
 

@@ -29,6 +29,8 @@
             console.log("App Name: " + app1.getAppName());
             console.log("Icon File: " + app1.getIconPath());
             console.log("Download Path: " + app1.getDownloadPath());
+            console.log("App created at: " + app1.getCreationDate());
+            console.log("App Size (bytes): " + app1.getAppSize());
             allTestsPassed = !allTestsPassed;
             console.log("Test failed - no exception thrown");
 
@@ -51,6 +53,8 @@
             console.log("App Name: " + app2.getAppName());
             console.log("Icon File: " + app2.getIconPath());
             console.log("Download Path: " + app2.getDownloadPath());
+            console.log("App created at: " + app2.getCreationDate());
+            console.log("App Size (bytes): " + app2.getAppSize());
             console.log("Test passed - Valid IPA Test complete.");
 
         } catch (e2) {
