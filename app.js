@@ -54,6 +54,22 @@
                 return appLocation;
             }
         }
+        
+        /*
+         * Retrieve the filename from the app Path.
+         */
+        function extractAppFilenameFromPath() {
+
+            var result = appLocation.split('/');
+            
+            // There has to be a better way of doing this - to be updated later.
+            if (result.length === 1) {
+                result = appLocation.split('\\');
+            }
+            
+            // now we just return the file name.
+            return result[result.length - 1];
+        }
 
         /*
          * Verify that a given file path exists
@@ -251,6 +267,9 @@
         //=========================================================
         
         return {
+            getAppFileName: function () {
+                return extractAppFilenameFromPath();
+            },
             // Name of the app
             getAppName: function () {
                 return extractAppDisplayName();
