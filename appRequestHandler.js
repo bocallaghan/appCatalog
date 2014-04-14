@@ -29,8 +29,9 @@
             url = require('url'),
             fs = require('fs'),
             path = require('path'),
-            App = require('./app.js'),
+            App = require('./ios_app.js'),
             appList = [],
+            latestResponseCode = 200,
             supportedMimeTypes = {
                 'png' : 'image/png',
                 'gif' : 'image/gif',
@@ -55,6 +56,7 @@
         function streamResponse(contentType, file) {
             
             if (!fs.existsSync(file)) {
+                latestResponseCode = 404;
                 throw 'File not found';
             }
             
@@ -64,7 +66,7 @@
                 var rs;
 
                 // Write the header of the response.
-                res.writeHead(200, {
+                res.writeHead(latestResponseCode, {
                     'Content-Type' : contentType,
                     'Content-Length' : stat.size
                 });
@@ -81,13 +83,40 @@
             res.setHeader("Content-Type", contentType);
 
             // Write the response code
-            res.writeHead(200);
+            res.writeHead(latestResponseCode);
 
             // We now complete this using the async method as it gives better performance.
             var options = {'encoding' : 'utf8'};
 
             // Send the response data.
             res.end(data);
+        }
+        
+        /*
+         * Handles the request from an iOS device for its manifest file
+         * A manifest file is just an XML file which tells iOS what app its about to download.
+         */
+        function handleManifestRequest() {
+            var query = url.parse(req.url, true).query,
+                appID = query.appID,
+                appName = query.appName,
+                version = query.appVersion,
+                downloadLocation = query.filename,
+                host = req.headers.host,
+                regex_appID = new RegExp('{appID}', 'g'),
+                regex_appName = new RegExp('{appName}', 'g'),
+                regex_appVersion = new RegExp('{appVersion}', 'g'),
+                regex_appFilename = new RegExp('{filename}', 'g'),
+                regex_hostname = new RegExp('{host}', 'g'),
+                manifestData = fs.readFileSync('templates/template_manifest.xml', 'utf8');
+            
+            manifestData = manifestData.replace(regex_appID, appID);
+            manifestData = manifestData.replace(regex_appName, appName);
+            manifestData = manifestData.replace(regex_appVersion, version);
+            manifestData = manifestData.replace(regex_appFilename, downloadLocation);
+            manifestData = manifestData.replace(regex_hostname, host);
+            
+            sendStandardResponse('application/xml', manifestData);
         }
         
         /*
@@ -107,6 +136,7 @@
             
             // If we don't support he mime type then we throw an exception.
             if (mimeType === undefined) {
+                latestResponseCode = 500;
                 throw 'File format ' + fileExtension + ' is not supported by this server.';
             }
             
@@ -132,8 +162,10 @@
                     z,
                     regex_appID = new RegExp('{appID}', 'g'),
                     regex_appName = new RegExp('{appName}', 'g'),
+                    regex_appVersion = new RegExp('{appVersion}', 'g'),
                     regex_appSize = new RegExp('{appSize}', 'g'),
-                    regex_appIcon = new RegExp('{appIcon}', 'g');
+                    regex_appIcon = new RegExp('{appIcon}', 'g'),
+                    regex_appFilename = new RegExp('{filename}', 'g');
 
                 // Nothing we can do if there is an error.
                 if (error) {
@@ -160,10 +192,12 @@
                 // For each file we retrieve stats about it and then format an output.
                 for (z = appList.length - 1; z >= 0; z = z - 1) {
                     
-                    appEntry = appEntryTemplate.replace(regex_appID, appList[z].getAppFileName());
+                    appEntry = appEntryTemplate.replace(regex_appID, appList[z].getAppID());
                     appEntry = appEntry.replace(regex_appName, appList[z].getAppName());
                     appEntry = appEntry.replace(regex_appIcon, appList[z].getIconPath());
                     appEntry = appEntry.replace(regex_appSize, appList[z].getAppSize());
+                    appEntry = appEntry.replace(regex_appVersion, appList[z].getVersion());
+                    appEntry = appEntry.replace(regex_appFilename, appList[z].getAppFileName());
                     
                     // Finally, once all info has been added we add it to our list of apps.
                     appEntries = appEntries + appEntry;
@@ -197,6 +231,7 @@
             // if the path is /manifest and there is a query string we are returning a manifest file.
             } else if (path === '/manifest' && query.appID !== undefined) {
                 console.log('Manifest file requested');
+                handleManifestRequest();
                 
             // if the path is /somethingElse and there is no query string we are returning the app itself.
             } else {
@@ -216,7 +251,7 @@
             res.setHeader("Content-Type", "text/html");
 
             // Write the response code
-            res.writeHead(500);
+            res.writeHead(latestResponseCode);
 
             // Send the response data.
             res.end(e);

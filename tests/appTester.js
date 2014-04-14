@@ -11,7 +11,7 @@
     // JSLint directives to ensure NodeJS support.
     /*global exports, require, console*/
     
-    var App = require('../app.js'),
+    var App = require('../ios_app.js'),
         invalidAppPath = 'C:\\ipas\\com.notExistsing.ipa',
         validAppPath1 = 'C:\\ipas\\com.test.ipa',
         validAppPath2 = 'C:\\ipas\\com.test2.ipa',

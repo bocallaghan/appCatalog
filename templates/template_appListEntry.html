@@ -3,6 +3,9 @@
         {appName}
     </td>
     <td>
+        {appVersion}
+    </td>
+    <td>
         {appID}
     </td>
     <td>
@@ -12,6 +15,6 @@
         <!--<img src="{icon}"/>-->
     </td>
     <td>
-        <a href="itms-services://?action=download-manifest&url=/manifest?appID={appID}">Download</a>
+        <a href="itms-services://?action=download-manifest&url=/manifest?appID={appID}&appName={appName}&appVersion={appVersion}&filename={filename}">Download</a>
     </td>
 </tr>
